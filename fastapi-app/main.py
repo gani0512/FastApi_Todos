@@ -54,7 +54,7 @@ def update_todo(todo_id: int, updated_todo: TodoItem):
     raise HTTPException(status_code=404, detail="To-Do item not found")
 
 # To-Do 항목 삭제
-@app.delete("/todos/{todo_id}", response_model=dict,  response_model=dict, responses={404: {"description": "To-Do item not found"}})
+@app.delete("/todos/{todo_id}", response_model=dict,  responses={404: {"description": "To-Do item not found"}})
 def delete_todo(todo_id: int):
     todos = load_todos()
     new_todos = [todo for todo in todos if todo["id"] != todo_id]
