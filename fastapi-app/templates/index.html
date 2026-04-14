@@ -1,79 +1,160 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f5f5f5; min-height: 100vh; padding: 2rem 1rem; }
+        .container { max-width: 700px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; font-weight: 500; margin-bottom: 1.5rem; color: #1a1a1a; }
+        .form-card { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        input, select { width: 100%; padding: 8px 12px; border: 0.5px solid #ccc; border-radius: 8px; font-size: 14px; background: white; color: #1a1a1a; }
+        input:focus, select:focus { outline: none; border-color: #7F77DD; }
+        .btn { padding: 8px 16px; border-radius: 8px; border: 0.5px solid #ccc; background: white; font-size: 14px; cursor: pointer; }
+        .btn-primary { background: #534AB7; color: white; border-color: #534AB7; width: 100%; }
+        .btn-primary:hover { background: #3C3489; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-danger { border-color: #E24B4A; color: #E24B4A; }
+        .btn-danger:hover { background: #FCEBEB; }
+        .todo-item { background: white; border-radius: 12px; border: 0.5px solid #ddd; padding: 1rem 1.25rem; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+        .todo-item.completed { opacity: 0.6; }
+        .todo-content { flex: 1; }
+        .todo-title { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+        .todo-desc { font-size: 13px; color: #666; margin-top: 2px; }
+        .todo-actions { display: flex; gap: 6px; }
+        .priority-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+        .priority-1 { background: #FCEBEB; color: #A32D2D; }
+        .priority-2 { background: #FAEEDA; color: #854F0B; }
+        .priority-3 { background: #EAF3DE; color: #3B6D11; }
+        .priority-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-btn { padding: 4px 12px; border-radius: 20px; border: 0.5px solid #ccc; background: white; font-size: 13px; cursor: pointer; }
+        .filter-btn.active { background: #534AB7; color: white; border-color: #534AB7; }
+        .empty { text-align: center; color: #999; padding: 2rem; font-size: 14px; }
+        .checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #534AB7; flex-shrink: 0; }
+    </style>
 </head>
 <body>
-    <h1>To-Do List</h1>
-    <ul id="todo-list"></ul>
-    <form id="todo-form">
-        <input type="text" id="title" placeholder="Title" required>
-        <input type="text" id="description" placeholder="Description" required>
-        <button type="submit">Add To-Do</button>
-    </form>
+    <div class="container">
+        <h1>To-Do List</h1>
+
+        <div class="form-card">
+            <div class="form-grid">
+                <input type="text" id="title" placeholder="제목" required>
+                <input type="text" id="description" placeholder="설명" required>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div class="priority-label">우선순위</div>
+                <select id="priority">
+                    <option value="1">🔴 높음</option>
+                    <option value="2" selected>🟡 보통</option>
+                    <option value="3">🟢 낮음</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="addTodo()">추가하기</button>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
+            <button class="filter-btn" onclick="setFilter('1', this)">🔴 높음</button>
+            <button class="filter-btn" onclick="setFilter('2', this)">🟡 보통</button>
+            <button class="filter-btn" onclick="setFilter('3', this)">🟢 낮음</button>
+            <button class="filter-btn" onclick="setFilter('done', this)">완료됨</button>
+        </div>
+
+        <div id="todo-list"></div>
+    </div>
+
     <script>
-        async function fetchTodos() {
-            const response = await fetch('/todos');
-            const todos = await response.json();
-            const todoList = document.getElementById('todo-list');
-            todoList.innerHTML = '';
-            todos.forEach(todo => {
-                const li = document.createElement('li');
-                li.textContent = `${todo.title}: ${todo.description} (Completed: ${todo.completed})`;
-                const editButton = document.createElement('button');
-                editButton.textContent = 'Edit';
-                editButton.onclick = () => editTodo(todo.id);
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.onclick = () => deleteTodo(todo.id);
-                li.appendChild(editButton);
-                li.appendChild(deleteButton);
-                todoList.appendChild(li);
-            });
+        let currentFilter = 'all';
+
+        const priorityLabel = { '1': '높음', '2': '보통', '3': '낮음' };
+
+        function setFilter(f, btn) {
+            currentFilter = f;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            fetchTodos();
         }
 
-        async function editTodo(id) {
-            const title = prompt('Enter new title:');
-            const description = prompt('Enter new description:');
-            const completed = confirm('Is this task completed?');
-            const response = await fetch(`/todos/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ id, title, description, completed })
-            });
-            if (response.ok) {
-                fetchTodos();
+        async function fetchTodos() {
+            const res = await fetch('/todos');
+            let todos = await res.json();
+
+            if (currentFilter === 'done') todos = todos.filter(t => t.completed);
+            else if (currentFilter !== 'all') todos = todos.filter(t => String(t.priority) === currentFilter);
+
+            todos.sort((a, b) => (a.priority || 2) - (b.priority || 2));
+
+            const list = document.getElementById('todo-list');
+            if (todos.length === 0) {
+                list.innerHTML = '<div class="empty">할 일이 없어요!</div>';
+                return;
             }
+            list.innerHTML = todos.map(todo => `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                    <input class="checkbox" type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete(${todo.id}, ${todo.completed}, '${todo.title}', '${todo.description}', ${todo.priority || 2})">
+                    <div class="todo-content">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="todo-title">${todo.title}</span>
+                            <span class="priority-badge priority-${todo.priority || 2}">${priorityLabel[todo.priority || 2]}</span>
+                        </div>
+                        <div class="todo-desc">${todo.description}</div>
+                    </div>
+                    <div class="todo-actions">
+                        <button class="btn btn-sm" onclick="editTodo(${todo.id}, '${todo.title}', '${todo.description}', ${todo.completed}, ${todo.priority || 2})">수정</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTodo(${todo.id})">삭제</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addTodo() {
+            const title = document.getElementById('title').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const priority = parseInt(document.getElementById('priority').value);
+            if (!title || !description) return alert('제목과 설명을 입력하세요.');
+            await fetch('/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: Date.now(), title, description, completed: false, priority })
+            });
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+            fetchTodos();
+        }
+
+        async function toggleComplete(id, completed, title, description, priority) {
+            await fetch(`/todos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, title, description, completed: !completed, priority })
+            });
+            fetchTodos();
+        }
+
+        async function editTodo(id, title, description, completed, priority) {
+            const newTitle = prompt('제목:', title);
+            if (!newTitle) return;
+            const newDesc = prompt('설명:', description);
+            if (!newDesc) return;
+            const newPriority = parseInt(prompt('우선순위 (1=높음, 2=보통, 3=낮음):', priority));
+            await fetch(`/todos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, title: newTitle, description: newDesc, completed, priority: newPriority })
+            });
+            fetchTodos();
         }
 
         async function deleteTodo(id) {
-            const response = await fetch(`/todos/${id}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                fetchTodos();
-            }
+            if (!confirm('삭제할까요?')) return;
+            await fetch(`/todos/${id}`, { method: 'DELETE' });
+            fetchTodos();
         }
-
-        document.getElementById('todo-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const title = document.getElementById('title').value;
-            const description = document.getElementById('description').value;
-            const response = await fetch('/todos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ id: Date.now(), title, description, completed: false })
-            });
-            if (response.ok) {
-                fetchTodos();
-            }
-        });
 
         fetchTodos();
     </script>
