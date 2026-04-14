@@ -13,7 +13,7 @@ class TodoItem(BaseModel):
     title: str
     description: str
     completed: bool
-    priority: Optional[int] = 2  # 1=높음, 2=보통, 3=낮음
+    priority: Optional[int] = 2 
 
 # JSON 파일 경로
 TODO_FILE = "todo.json"
@@ -35,7 +35,7 @@ def get_todos():
     return sorted(todos, key=lambda x: x.get("priority", 2))
 
 # 신규 To-Do 항목 추가
-@app.post("/todos", response_model=TodoItem)
+@app.post("/todos", response_model=TodoItem,  responses={404: {"description": "To-Do item not found"}})
 def create_todo(todo: TodoItem):
     todos = load_todos()
     todos.append(todo.model_dump())
@@ -54,7 +54,7 @@ def update_todo(todo_id: int, updated_todo: TodoItem):
     raise HTTPException(status_code=404, detail="To-Do item not found")
 
 # To-Do 항목 삭제
-@app.delete("/todos/{todo_id}", response_model=dict)
+@app.delete("/todos/{todo_id}", response_model=dict,  response_model=dict, responses={404: {"description": "To-Do item not found"}})
 def delete_todo(todo_id: int):
     todos = load_todos()
     new_todos = [todo for todo in todos if todo["id"] != todo_id]
