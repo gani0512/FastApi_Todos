@@ -57,8 +57,10 @@ def update_todo(todo_id: int, updated_todo: TodoItem):
 @app.delete("/todos/{todo_id}", response_model=dict)
 def delete_todo(todo_id: int):
     todos = load_todos()
-    todos = [todo for todo in todos if todo["id"] != todo_id]
-    save_todos(todos)
+    new_todos = [todo for todo in todos if todo["id"] != todo_id]
+    if len(new_todos) == len(todos):  # 삭제된 항목이 없으면
+        raise HTTPException(status_code=404, detail="To-Do item not found")
+    save_todos(new_todos)
     return {"message": "To-Do item deleted"}
 
 # 우선순위로 필터링
